@@ -243,7 +243,5 @@ If something looks off, open an issue or PR.
 
 ## Next steps
 
-- After local review: publish this repository, fill the repository URL in
-  `docs/upstream-issue.md`, then submit the bug report to Comfy-Org/ComfyUI.
-- Optional later: calibrated fp8 (scale factors) would be a separate experiment —
-  not claimed here.
+- The repository and upstream bug report are published.
+- Optional later: calibrated fp8 (scale factors) would be a separate experiment — not claimed here.
