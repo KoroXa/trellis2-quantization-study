@@ -1,0 +1,9 @@
+layer,mae_over_mean_abs_ref,zero_frac_bf16,zero_frac_fp8,new_zero_frac,abs_max_bf16
+model.structure_model.t_embedder.mlp.0.weight,0.0637,0.0000,0.1520,0.1520,0.451
+model.structure_model.blocks.0.self_attn.to_qkv.weight,0.0372,0.0000,0.0673,0.0673,0.996
+model.structure_model.blocks.0.self_attn.to_out.weight,0.0421,0.0000,0.0616,0.0616,0.508
+model.structure_model.adaLN_modulation.1.weight,0.0287,0.0000,0.0338,0.0338,0.980
+model.structure_model.input_layer.weight,0.0230,0.0000,0.0026,0.0026,1.070
+model.structure_model.out_layer.weight,0.0318,0.0000,0.0338,0.0338,0.354
+model.img2shape.input_layer.weight,0.0224,0.0000,0.0062,0.0062,1.695
+model.img2shape.out_layer.weight,0.0263,0.0000,0.0214,0.0214,0.295

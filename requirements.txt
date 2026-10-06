@@ -1,0 +1,6 @@
+# Standalone study scripts (no ComfyUI required).
+# Verified in this study with: Python 3.12.10, torch 2.12.1+cu130 (CUDA 13.0).
+# Naive fp8 cast needs a PyTorch build that supports torch.float8_e4m3fn
+# (CUDA builds with fp8 support; CPU-only torch may not cast as expected).
+torch>=2.2
+safetensors>=0.4

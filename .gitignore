@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Model weights and heavy artifacts — never commit
+*.safetensors
+*.safetensors.tmp
+*.gguf
+*.ckpt
+*.pt
+*.pth
+*.bin
+*.onnx
+*.glb
+*.ply
+*.spz
+*.mp4
+*.zip
+*.7z
+*.rar
+
+# ComfyUI / run outputs
+ComfyUI/
+output/
+temp/
+*.tmp
+
+# Local secrets / machine-specific
+*.log
