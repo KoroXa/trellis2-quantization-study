@@ -149,8 +149,8 @@ Please choose whichever boundary you prefer; we did not want to prescribe archit
   observation; it may or may not relate to the naive fp8 weights. Full fp8 quality/benchmark
   results were not obtained.
 - Reproduction scripts, weight-dtype analysis, and workflow notes:
-  **Repository: not yet public** (local test repo; URL will be filled after publish).
-  No model weights are included.
+  **https://github.com/KoroXa/trellis2-quantization-study** (no model weights
+  included).
 - The local ComfyUI checkout used for the traceback above is commit
   `3dd559d81f745747cab884a3b9f5fd8867d79efe` (2026-09-20). Separately, we
   re-fetched the corresponding files from upstream `master` on 2026-10-06 and
