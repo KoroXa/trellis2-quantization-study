@@ -1,0 +1,120 @@
+# TRELLIS.2 generation performance study
+
+Companion to the bf16/int8 quantization battle (see `README.md`) and the NVFP4
+experiment below. Environment: ComfyUI `b0b74356` (v0.39.0), Python 3.13.14,
+torch 2.14.0+cu130, RTX 5060 Ti 16 GB, Windows, `--disable-all-custom-nodes`.
+Workflow: `workflows/trellis2_image_to_model.json` (Trellis branch,
+`316=True`), input `input/viking_wolf_rune_axe.png`, seeds 56/42/42/43.
+
+## Method
+
+`scripts/profile_workflow.py` queues an API-format prompt, listens to
+ComfyUI's websocket (`executing`/`executed`/`execution_cached`), and records
+per-node wall time plus `nvidia-smi` VRAM sampling (`--gpu`).
+
+- Node end time is inferred: ComfyUI only sends `executed` for nodes that
+  produce UI output; other nodes are closed when the next node starts. This is
+  a protocol property, not a script bug.
+- **Cold run** = fresh server (empty history, models from disk). This is the
+  headline metric.
+- **Hot run** = immediate rerun of the identical prompt (everything served
+  from ComfyUI's output cache, ~0.1–0.3 s).
+- Protocol: 3 separate server launches (NVFP4, int8, bf16), cold + hot each,
+  Blender closed, fixed seeds. No ComfyUI source patches — launch args, nodes
+  and workflow values only.
+
+## Bottleneck map (int8 cold baseline, 370.8 s)
+
+| Node | Type | int8 | Share |
+|------|------|------|-------|
+| 233 | BakeAmbientOcclusion | 77.9 s | 21% |
+| 23 | KSampler (upsampled shape, 12 steps) | 63.3 s | 17% |
+| 147 | BakeTextureFromVoxel (4K) | 43.8 s | 12% |
+| 196 | UnwrapMesh (4K) | 41.6 s | 11% |
+| 12 | KSampler (texture, 12 steps) | 33.6 s | 9% |
+| 241 | RemeshMesh (768) | 21.0 s | 6% |
+| 224 | BakeNormalMapFromMesh (2048) | 20.4 s | 6% |
+| 18 / 3 | KSampler shape (20 steps) / structure (12 steps) | 8.8 / 6.7 s | 4% |
+| rest (VAE decodes, preprocess, loaders, saves) | — | ~47 s | 13% |
+
+All four KSamplers together: ~112 s (30%). The bottleneck is the mesh/texture
+post-processing, not diffusion sampling.
+
+## Lever experiments (isolated, warm cache)
+
+| Exp | Change | Result | Verdict |
+|-----|--------|--------|---------|
+| exp01 | AO 1024/64 → 512/32 | 76.5 → 21.2 s (−55 s), geometry identical, occlusion maps visually comparable | **WIN, accepted** |
+| exp02 | texture 4096 → 2048 | unwrap 38.0 → 38.5 s (no effect!), bake 41.5 → 29.2 s (−12 s); texture visibly softer | weak gain, quality cost — **rejected alone, kept in combo** |
+| exp03 | DecimateMesh 700K → 350K faces | unwrap −7.5 s, rest flat | weak alone |
+| exp04 | RemeshMesh 768 → 512 | remesh −7 s, AO −18 s, unwrap −10 s, normals −4 s (~−41 s combined) | **WIN** |
+| exp05 | combo: AO512 + tex2K + remesh512 + decim350K | AO 14.8 s, unwrap 21.8 s, bake 26.0 s (warm downstream re-run) | candidate final config |
+
+Evidence images: `results/perf/` (`ao_*`, `tex_*`).
+Finding: unwrap time sits in segmentation, not rasterization — halving the
+resolution did nothing to it.
+
+## NVFP4 experiment
+
+Motivation: naive fp8 (no scales) fails (see `docs/upstream-issue.md`); a real
+4-bit format with scales might succeed where naive fp8 died.
+
+- `scripts/quant_bf16_to_nvfp4.py` quantizes all 840 2D linears (same coverage
+  as Comfy-Org's int8 file) with `TensorCoreNVFP4Layout`
+  (per-tensor scale + 16-wide microscaling). The bf16 source is read through a
+  manual byte path.
+- Result: `trellis_2_nvfp4.safetensors`, **2.81 GB**, 840 `comfy_quant`
+  `{"format": "nvfp4"}` layers (weights not shipped in this repo).
+- Loads in ComfyUI in ~1 s, constructs without the fp8 `arange` crash
+  (quantized path keeps bf16 compute dtype), 840 `quant_format=nvfp4` modules.
+- Full generation **completes**: valid dense mesh, 9.79M verts (vs 7.82M int8,
+  7.87M bf16). Round-trip weight error ~9% relative (vs 2–6% for naive fp8,
+  but without fp8's catastrophic 15% zero-underflow).
+- Caveat: baked texture maps look flatter with speckles vs int8/bf16 on flat
+  UV previews (`results/perf/tex_nvfp4_4bit.png`). Final 3D verdict pending
+  visual inspection.
+
+Note: minimal standalone `safe_open` probes segfaulted on the 10 GB bf16 file
+in this env (VAE-bf16 and int8 files read fine; header/size/bytes verified
+intact). ComfyUI itself loads and runs the same bf16 file without issues, so
+the probe crashes were an artifact of the minimal probe context, not file
+damage. Cause undetermined; recorded here for honesty.
+
+## Final comparison (clean cold runs, Blender closed)
+
+| Metric | int8 (calibrated) | NVFP4 (ours) | bf16 |
+|--------|-------------------|--------------|------|
+| Checkpoint | 4.89 GB | 2.81 GB | 9.63 GB |
+| Cold full run | **370.8 s** | 414.3 s | 372.6 s |
+| Hot rerun | 0.1 s | 0.1 s | 0.3 s |
+| KSampler 23 / 12 (s) | 63.3 / 33.6 | 73.5 / 38.4 | 82.5 / 43.6 |
+| KSampler 18 / 3 (s) | 8.8 / 6.7 | 7.7 / 13.4 | 9.1 / 9.6 |
+| Peak VRAM (cold) | 80.1% (13.1 GB) | 81.0% (13.2 GB) | **91.5% (14.9 GB)** |
+| Shape mesh verts | 7.82M | **9.79M** | 7.87M |
+| GLB (clean runs) | 68.8 MB | 74.1 MB | 64.9 MB |
+
+Sampler-time ordering is clean (int8 < nvfp4 < bf16) on the two big stages.
+Totals are dominated by mesh-pipeline variance: NVFP4's total is higher mostly
+because its denser mesh costs more in bakes, not because sampling is slower.
+Per-node variance across runs is real (e.g. upsample stage 1–14 s), so
+single-digit differences should not be over-read; the table above is one cold
+run per config.
+
+## Conclusions
+
+1. The pipeline bottleneck is post-processing (~70%), not sampling (~30%).
+2. Cheap wins with no visible cost: AO 512/32 (−55 s), Remesh 512 (~−41 s
+   combined effect). Texture 2K saves little (−12 s) for visible softening.
+3. NVFP4 4-bit DiT **works end-to-end** (2.81 GB, loads in 1 s) where naive
+   fp8 fails — but is not faster overall here and needs a final visual verdict.
+4. bf16 in this env: loads and runs fine (372.6 s cold); needs the most VRAM
+   (91.5%).
+
+## Files
+
+- `scripts/profile_workflow.py` — profiler (`--extract/--run/--list`, `--csv`, `--gpu`)
+- `workflows/trellis2_image_to_model.api.json` — captured API prompt (int8)
+- `workflows/exp/` — experiment prompt variants (exp01–06, combo, bf16)
+- `results/timings/` — per-node CSVs + `_gpu.csv` VRAM logs
+  (`int8_cold/hot`, `nvfp4_cold/hot`, `bf16_cold/hot`, `exp01–06`, `baseline_cold_int8`)
+- `results/perf/` — AO/texture comparison previews

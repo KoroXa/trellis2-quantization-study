@@ -5,3 +5,5 @@
 # (CUDA builds with fp8 support; CPU-only torch may not cast as expected).
 torch>=2.2
 safetensors>=0.4
+# profile_workflow.py --run additionally needs aiohttp (ships with ComfyUI;
+# run it with ComfyUI's embedded Python) and the nvidia-smi binary for --gpu.

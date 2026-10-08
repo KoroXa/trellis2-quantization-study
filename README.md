@@ -117,6 +117,26 @@ Post-processing time (~210 s) is excluded from the KSampler numbers above.
 fp8 was not included as a third row in the mesh comparison because no valid mesh
 was produced. See [docs/upstream-issue.md](docs/upstream-issue.md).
 
+## Performance study
+
+Bottleneck map and speedup levers for the full pipeline (see
+[docs/perf-study.md](docs/perf-study.md) for method, per-node tables and
+evidence). Cold full runs on the same machine (Blender closed, fresh server):
+
+| Metric | int8 (calibrated) | NVFP4 (this study) | bf16 |
+|--------|-------------------|--------------------|------|
+| Checkpoint | 4.89 GB | **2.81 GB** | 9.63 GB |
+| Cold full run | **370.8 s** | 414.3 s | 372.6 s |
+| Hot rerun (cache) | 0.1 s | 0.1 s | 0.3 s |
+| Peak VRAM (cold) | 80.1% | 81.0% | 91.5% |
+| Shape mesh verts | 7.82M | 9.79M | 7.87M |
+
+Findings: sampling is only ~30% of the time; the mesh/texture post-processing
+dominates. Cheap wins: AO bake 1024/64 → 512/32 (−55 s), Remesh 768 → 512
+(~−41 s combined). NVFP4 4-bit DiT (`scripts/quant_bf16_to_nvfp4.py`, 840
+layers) loads in ~1 s and generates a valid dense mesh where naive fp8 fails —
+but is not faster end-to-end here; final visual verdict pending.
+
 ## Reproduction
 
 ### 1. Standalone scripts (no ComfyUI)
@@ -215,14 +235,21 @@ input/
   viking_wolf_rune_axe.jpg|.png   # test input (PNG is a converted copy of the local JPEG)
 scripts/
   quant_bf16_to_fp8.py            # research-only: 2D *.weight -> fp8_e4m3fn (CLI, no scale)
+  quant_bf16_to_nvfp4.py          # research-only: 2D *.weight -> ComfyUI NVFP4 (CLI, per-tensor + block scales)
   compare_weights.py              # mae/mean|ref| + zero fractions between checkpoints
+  profile_workflow.py             # per-node timing + VRAM profiler (--extract/--run/--list, --csv, --gpu)
 workflows/
-  trellis2_image_to_model.json
+  trellis2_image_to_model.json    # canonical UI workflow (Trellis branch, 316=True)
+  trellis2_image_to_model.api.json# captured API prompt (int8)
+  exp/                            # experiment API prompts (exp01-06, combo, bf16)
 results/
   weight_damage.csv
   mesh_bf16_vs_int8.png
+  timings/                        # per-node CSVs + _gpu.csv VRAM logs (baseline, exp01-06, cold/hot)
+  perf/                           # AO/texture comparison previews
 docs/
   upstream-issue.md               # draft issue for Comfy-Org/ComfyUI
+  perf-study.md                   # bottleneck map, levers, NVFP4 study, final comparison
 requirements.txt
 LICENSE
 .gitignore
@@ -249,4 +276,6 @@ If something looks off, open an issue or PR.
 ## Next steps
 
 - The repository and upstream bug report are published.
-- Optional later: calibrated fp8 (scale factors) would be a separate experiment — not claimed here.
+- Performance study done (bottleneck map, AO/remesh wins, NVFP4 4-bit end-to-end).
+  Open: final visual verdict on the NVFP4 mesh; KSampler-23 (63–83 s) remains
+  the largest single stage — torch.compile / attention flags not yet tried.
