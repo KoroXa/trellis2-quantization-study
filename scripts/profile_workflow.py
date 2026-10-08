@@ -48,6 +48,21 @@ def fetch_history(base, prompt_id=None):
     return http_json(url, timeout=60)
 
 
+def api_prompt_of(entry):
+    """Return the API-format prompt dict from a history entry.
+
+    Queue items are stored as [number, prompt_id, prompt, extra_data,
+    outputs_to_execute]; find the element that looks like an API prompt.
+    """
+    prompt = entry.get("prompt") or []
+    for el in prompt:
+        if isinstance(el, dict) and el and all(
+            isinstance(v, dict) and "class_type" in v for v in el.values()
+        ):
+            return el
+    return None
+
+
 def pick_latest_run(history, require_nodes=None):
     """Return (prompt_id, entry) of the most recent completed run."""
     candidates = []
@@ -55,18 +70,17 @@ def pick_latest_run(history, require_nodes=None):
         status = entry.get("status") or {}
         if not status.get("completed"):
             continue
-        prompt = entry.get("prompt")
-        if not prompt or len(prompt) < 2 or not isinstance(prompt[1], dict):
+        api_prompt = api_prompt_of(entry)
+        if not api_prompt:
             continue
-        api_prompt = prompt[1]
         if require_nodes:
             if not any(n.get("class_type") == require_nodes for n in api_prompt.values()):
                 continue
         create_time = 0
-        try:
-            create_time = int(prompt[3].get("extra_data", {}).get("create_time", 0)) if isinstance(prompt[3], dict) else 0
-        except Exception:
-            pass
+        messages = status.get("messages") or []
+        for ev, data in messages:
+            if ev == "execution_start" and data.get("timestamp"):
+                create_time = data["timestamp"]
         candidates.append((create_time, pid, entry, api_prompt))
     if not candidates:
         return None
@@ -111,8 +125,8 @@ def cmd_list(args):
                 t0 = ts
             if ev in ("execution_success", "execution_error") and ts:
                 t1 = ts
-        prompt = entry.get("prompt") or [None, {}]
-        api_prompt = prompt[1] if len(prompt) > 1 and isinstance(prompt[1], dict) else {}
+        prompt = entry.get("prompt") or [None, None]
+        api_prompt = api_prompt_of(entry) or {}
         duration = (t1 - t0) / 1000 if (t0 and t1) else None
         rows.append((t0 or 0, pid, status.get("status_str", "?"), duration, len(api_prompt)))
     rows.sort()
