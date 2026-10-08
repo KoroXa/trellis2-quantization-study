@@ -1,0 +1,3 @@
+index, timestamp, memory.used [MiB], memory.total [MiB], utilization.gpu [%]
+0, 2026/10/08 21:33:27.092, 6186 MiB, 16311 MiB, 0 %
+1, 2026/10/08 21:33:27.093, 259 MiB, 12288 MiB, 0 %
