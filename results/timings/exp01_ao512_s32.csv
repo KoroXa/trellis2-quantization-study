@@ -1,0 +1,16 @@
+node_id,class_type,start_s,duration_s,pct_total,end_source,cached
+302,PreviewImage,0.102,0.0,0.0,executed-without-start,True
+303,MaskPreview,0.102,0.0,0.0,executed-without-start,True
+207,PreviewImage,0.102,0.0,0.0,executed-without-start,True
+226,PreviewImage,0.104,0.0,0.0,executed-without-start,True
+323,Preview3DAdvanced,0.106,0.0,0.0,executed-without-start,True
+164,PreviewImage,0.106,0.0,0.0,executed-without-start,True
+246,Preview3DAdvanced,0.106,0.0,0.0,executed-without-start,True
+208,PreviewImage,0.106,0.0,0.0,executed-without-start,True
+262,PreviewImage,0.106,0.0,0.0,executed-without-start,True
+233,BakeAmbientOcclusion,0.106,21.225,77.89,next,False
+235,PreviewImage,21.331,0.027,0.1,executed,False
+210,ApplyTextureToMesh,21.36,0.227,0.83,next,False
+260,MeshSmoothNormals,21.587,1.238,4.54,next,False
+285,MeshToFile3D,22.825,4.331,15.89,next,False
+322,Save3DAdvanced,27.156,0.092,0.34,executed,False
