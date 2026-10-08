@@ -4,12 +4,12 @@
 
 | Item | Value |
 |------|--------|
-| ComfyUI | commit `3dd559d81f745747cab884a3b9f5fd8867d79efe` (2026-09-20) |
-| Python | 3.12.10 |
-| PyTorch | 2.12.1+cu130 |
+| ComfyUI | commit `b0b743566f65daafc423b4fea8a2fbda94b3384a` (v0.39.0, 2026-10-05) |
+| Install | ComfyUI Windows portable, fresh checkout, `--disable-all-custom-nodes` |
+| Python | 3.13.14 |
+| PyTorch | 2.14.0+cu130 |
 | CUDA | 13.0 |
-| GPU | NVIDIA GeForce RTX 5060 Ti, 16311 MiB |
-| Driver | 616.92 |
+| GPU | NVIDIA GeForce RTX 5060 Ti, 16283 MiB |
 | OS | Windows |
 | Model | TRELLIS.2 DiT (ComfyUI `Trellis2`), weights stored as `float8_e4m3fn` |
 | Scope | UNet / DiT loading path only |
@@ -17,16 +17,22 @@
 `supports_fp8_compute(device)` is `True` on this GPU.  
 `Trellis2.supported_inference_dtypes` is `[torch.bfloat16, torch.float32]`.
 
+Reproduced twice on the same GPU class:
+
+1. Clean ComfyUI portable at `b0b74356` (v0.39.0), all custom nodes disabled, normal `Load Diffusion Model` node in the GUI.
+2. Isolated Python load via `comfy.sd.load_diffusion_model_state_dict` on an older checkout (same dtype plumbing).
+
 ## Steps to reproduce
 
-1. Check out ComfyUI at commit `3dd559d81f745747cab884a3b9f5fd8867d79efe`.
+1. Start ComfyUI at commit `b0b743566f65daafc423b4fea8a2fbda94b3384a`
+   (e.g. `python_embeded\python.exe -s ComfyUI\main.py --windows-standalone-build --disable-all-custom-nodes`).
 2. Prepare a TRELLIS.2 diffusion-model checkpoint whose tensor dtypes are `float8_e4m3fn`
    (any fp8 checkpoint works; this report used a naive `bf16 → fp8_e4m3fn` cast without scale).
-3. Load it through the normal ComfyUI path, e.g. the `Load Diffusion Model` node or
-   `comfy.sd.load_diffusion_model_state_dict(state_dict)`.
+3. Load it through the normal ComfyUI path: `Load Diffusion Model` node
+   (`nodes.load_unet` → `comfy.sd.load_diffusion_model`).
 4. Observe the crash during model construction (`SparseStructureFlowModel.__init__`).
 
-Minimal probe (same environment):
+Minimal probe (same environment, run inside ComfyUI's Python):
 
 ```python
 import torch
@@ -64,23 +70,36 @@ It should either select a supported compute dtype (e.g. `bfloat16` via manual ca
 ## Actual behavior
 
 The model is constructed with fp8 dtype. `SparseStructureFlowModel.__init__` builds RoPE coordinate
-grids with `torch.arange(..., dtype=dtype)`, which is not implemented for fp8:
+grids with `torch.arange(..., dtype=dtype)`, which is not implemented for fp8.
+
+Real GUI repro on ComfyUI `b0b74356` (v0.39.0), `--disable-all-custom-nodes`:
 
 ```text
-Traceback (most recent call last):
-  File "repro_fp8_load.py", line 27, in <module>
-    model = sd_module.load_diffusion_model_state_dict(state_dict)
-  File "comfy/sd.py", line 2388, in load_diffusion_model_state_dict
+[ERROR] !!! Exception during processing !!! "arange_cpu" not implemented for 'Float8_e4m3fn'
+[ERROR] Traceback (most recent call last):
+  File "...\ComfyUI\execution.py", line 547, in execute
+    output_data, output_ui, has_subgraph, has_pending_tasks = await get_output_data(...)
+  File "...\ComfyUI\execution.py", line 352, in get_output_data
+    return_values = await _async_map_node_over_list(...)
+  File "...\ComfyUI\execution.py", line 326, in _async_map_node_over_list
+    await process_inputs(input_dict, i)
+  File "...\ComfyUI\execution.py", line 314, in process_inputs
+    result = f(**inputs)
+  File "...\ComfyUI\nodes.py", line 1013, in load_unet
+    model = comfy.sd.load_diffusion_model(unet_path, model_options=model_options)
+  File "...\ComfyUI\comfy\sd.py", line 2428, in load_diffusion_model
+    model = load_diffusion_model_state_dict(sd, model_options=model_options, metadata=metadata, disable_dynamic=disable_dynamic)
+  File "...\ComfyUI\comfy\sd.py", line 2415, in load_diffusion_model_state_dict
     model = model_config.get_model(new_sd, "")
-  File "comfy/supported_models.py", line 1504, in get_model
+  File "...\ComfyUI\comfy\supported_models.py", line 1523, in get_model
     return model_base.Trellis2(self, device=device)
-  File "comfy/model_base.py", line 1931, in __init__
+  File "...\ComfyUI\comfy\model_base.py", line 1942, in __init__
     super().__init__(model_config, model_type, device, unet_model)
-  File "comfy/model_base.py", line 185, in __init__
+  File "...\ComfyUI\comfy\model_base.py", line 185, in __init__
     self.diffusion_model = unet_model(**unet_config, device=device, operations=operations)
-  File "comfy/ldm/trellis2/model.py", line 985, in __init__
+  File "...\ComfyUI\comfy\ldm\trellis2\model.py", line 1002, in __init__
     self.structure_model = SparseStructureFlowModel(resolution=16, in_channels=8, out_channels=8, **struct_proj_kwargs, **args)
-  File "comfy/ldm/trellis2/model.py", line 660, in __init__
+  File "...\ComfyUI\comfy\ldm\trellis2\model.py", line 677, in __init__
     coords = torch.meshgrid(*[torch.arange(res, device=self.device, dtype=dtype) for res in [resolution] * 3], indexing='ij')
 NotImplementedError: "arange_cpu" not implemented for 'Float8_e4m3fn'
 ```
@@ -91,7 +110,7 @@ NotImplementedError: "arange_cpu" not implemented for 'Float8_e4m3fn'
 ## Analysis
 
 1. **Loader / model-management path.**  
-   In `comfy/model_management.py`, `unet_dtype()` inspects `weight_dtype`:
+   In `comfy/model_management.py` (`unet_dtype`, lines 1136-1164 on `b0b74356`):
 
    ```python
    fp8_dtype = None
@@ -111,9 +130,10 @@ NotImplementedError: "arange_cpu" not implemented for 'Float8_e4m3fn'
 
 2. **Model path.**  
    For TRELLIS.2, `comfy/supported_models.py` sets
-   `Trellis2.supported_inference_dtypes = [torch.bfloat16, torch.float32]`.
+   `Trellis2.supported_inference_dtypes = [torch.bfloat16, torch.float32]`
+   (line 1520 on `b0b74356`).
    That dtype is passed into `SparseStructureFlowModel.__init__` as `dtype`.
-   At `comfy/ldm/trellis2/model.py:660`, the RoPE coordinate grid is allocated with
+   At `comfy/ldm/trellis2/model.py:677`, the RoPE coordinate grid is allocated with
    `torch.arange(..., dtype=dtype)`. PyTorch does not implement `arange` for
    `float8_e4m3fn`, so construction raises `NotImplementedError`.
 
@@ -143,6 +163,8 @@ Please choose whichever boundary you prefer; we did not want to prescribe archit
   `float8_e4m3fn` **without scale factors**. That checkpoint is not a quality claim.
 - The crash shown above is **dtype plumbing**, not a quality issue: `torch.arange` fails for any
   `float8_e4m3fn` dtype argument, regardless of weight values.
+- The GUI repro ran with `--disable-all-custom-nodes` on a fresh portable install
+  (ComfyUI 0.39.0 / `b0b74356`), so this is not a custom-node issue.
 - With a local one-line experiment (RoPE coordinates forced to a supported dtype), the model
   **constructed and sampling started**. The structure stage then produced an empty coordinate
   layout (`Trellis2 coords can't be empty`). We are **not** asserting a cause for that separate
@@ -151,12 +173,10 @@ Please choose whichever boundary you prefer; we did not want to prescribe archit
 - Reproduction scripts, weight-dtype analysis, and workflow notes:
   **https://github.com/KoroXa/trellis2-quantization-study** (no model weights
   included).
-- The local ComfyUI checkout used for the traceback above is commit
-  `3dd559d81f745747cab884a3b9f5fd8867d79efe` (2026-09-20). Separately, we
-  re-fetched the corresponding files from upstream `master` on 2026-10-06 and
-  confirmed the same `unet_dtype` fp8 branch and the same
-  `torch.arange(..., dtype=dtype)` line in `comfy/ldm/trellis2/model.py`.
-  (Upstream HEAD at the time of that fetch was not recorded locally; the
-  assertion is that those two code sites were still present, not a pinned
-  master SHA.)
+- The first traceback in this report came from commit
+  `b0b743566f65daafc423b4fea8a2fbda94b3384a` (v0.39.0, 2026-10-05). The same
+  `unet_dtype` fp8 branch and the same
+  `torch.arange(..., dtype=dtype)` line were also present on the earlier checkout
+  `3dd559d81f745747cab884a3b9f5fd8867d79efe` (2026-09-20), where the bug was
+  confirmed with an isolated `load_diffusion_model_state_dict` repro.
 - Thanks for the project — happy to test a patch or open a PR if that would help.

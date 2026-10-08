@@ -25,9 +25,10 @@ Naive fp8 is a diagnostic cast, not a production quantization method.
 
 | Item | Value |
 |------|--------|
-| ComfyUI | `3dd559d81f745747cab884a3b9f5fd8867d79efe` (2026-09-20) |
-| Python | 3.12.10 |
-| PyTorch | 2.12.1+cu130 |
+| ComfyUI (bf16/int8 battle) | `3dd559d81f745747cab884a3b9f5fd8867d79efe` (2026-09-20) |
+| ComfyUI (fp8 crash repro) | `b0b743566f65daafc423b4fea8a2fbda94b3384a` (v0.39.0, 2026-10-05), `--disable-all-custom-nodes` |
+| Python | 3.12.10 (battle) / 3.13.14 (crash repro) |
+| PyTorch | 2.12.1+cu130 (battle) / 2.14.0+cu130 (crash repro) |
 | CUDA | 13.0 |
 | GPU | NVIDIA GeForce RTX 5060 Ti, 16 GB |
 | Driver | 616.92 |
@@ -132,7 +133,7 @@ python scripts/compare_weights.py path/to/trellis_2_bf16.safetensors path/to/tre
 
 ### 2. ComfyUI workflow (meshes)
 
-1. Install ComfyUI (study used commit `3dd559d8`).
+1. Install ComfyUI (battle used commit `3dd559d8`; fp8 crash repro confirmed on `b0b74356` / v0.39.0).
 2. Download models listed above into `ComfyUI/models/...`.
 3. Put the input image into `ComfyUI/input/viking_wolf_rune_axe.png`.
 4. Open `workflows/trellis2_image_to_model.json`.
@@ -147,6 +148,10 @@ python scripts/compare_weights.py path/to/trellis_2_bf16.safetensors path/to/tre
 2. Load through normal ComfyUI diffusion-model path.
 
 ### Crash
+
+Reproduced on a fresh ComfyUI portable install at `b0b74356` (v0.39.0) with
+`--disable-all-custom-nodes`: `Load Diffusion Model` → `NotImplementedError`
+on `torch.arange` for `float8_e4m3fn`.
 
 ComfyUI returns fp8 as the unet dtype when the checkpoint is fp8 and the GPU
 supports fp8 compute, even though `Trellis2.supported_inference_dtypes` is
