@@ -26,6 +26,8 @@ import asyncio
 import csv
 import json
 import os
+import shutil
+import subprocess
 import sys
 import time
 import urllib.error
@@ -273,7 +275,7 @@ def print_table(rows, total, top):
 
 
 def write_csv(path, rows, total):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=["node_id", "class_type", "start_s", "duration_s", "pct_total", "end_source", "cached"])
         w.writeheader()
@@ -284,16 +286,96 @@ def write_csv(path, rows, total):
     print(f"CSV: {path}")
 
 
+class GpuSampler:
+    """Poll nvidia-smi once per second for the duration of a run."""
+
+    def __init__(self, out_path):
+        self.out_path = out_path
+        self.proc = None
+        self._file = None
+
+    def start(self):
+        exe = shutil.which("nvidia-smi")
+        if exe is None:
+            print("nvidia-smi not found, GPU sampling disabled")
+            return False
+        os.makedirs(os.path.dirname(os.path.abspath(self.out_path)), exist_ok=True)
+        self._file = open(self.out_path, "w", encoding="utf-8")
+        self.proc = subprocess.Popen(
+            [exe, "--query-gpu=index,timestamp,memory.used,memory.total,utilization.gpu",
+             "--format=csv", "-l", "1"],
+            stdout=self._file, stderr=subprocess.DEVNULL,
+        )
+        return True
+
+    def stop(self):
+        if self.proc is None:
+            return None
+        self.proc.terminate()
+        try:
+            self.proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            self.proc.kill()
+        self._file.close()
+        self.proc = None
+        return self.summarize()
+
+    def summarize(self):
+        peaks = {}
+        try:
+            with open(self.out_path, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("index"):
+                        continue
+                    parts = [p.strip() for p in line.split(",")]
+                    try:
+                        idx = int(parts[0])
+                        used = int(parts[2].split()[0])
+                        total = int(parts[3].split()[0])
+                    except (ValueError, IndexError):
+                        continue
+                    cur = peaks.get(idx, [0, total])
+                    cur[0] = max(cur[0], used)
+                    cur[1] = total
+                    peaks[idx] = cur
+        except OSError:
+            return None
+        return peaks
+
+
 def cmd_run(args):
     with open(args.run, encoding="utf-8") as f:
         api_prompt = json.load(f)
 
-    recorder, rows, total = asyncio.run(run_once(args.url, api_prompt, args))
+    sampler = None
+    gpu_path = None
+    if args.gpu:
+        if args.csv and args.csv.endswith(".csv"):
+            gpu_path = args.csv[:-4] + "_gpu.csv"
+        elif args.csv:
+            gpu_path = args.csv + "_gpu.csv"
+        else:
+            gpu_path = "gpu_samples.csv"
+        sampler = GpuSampler(gpu_path)
+        if not sampler.start():
+            sampler = None
+
+    try:
+        recorder, rows, total = asyncio.run(run_once(args.url, api_prompt, args))
+    finally:
+        peaks = sampler.stop() if sampler else None
+
     if recorder.error:
         print(f"Run finished with ERROR: {recorder.error}")
     print_table(rows, total, args.top)
     if args.csv:
         write_csv(args.csv, rows, total)
+    if peaks:
+        for idx in sorted(peaks):
+            used, mem_total = peaks[idx]
+            print(f"GPU {idx} peak: {used} / {mem_total} MiB ({100.0 * used / mem_total:.1f}%)")
+        print(f"GPU log: {gpu_path}")
     return 1 if recorder.error else 0
 
 
@@ -308,6 +390,8 @@ def main():
     p.add_argument("--require-node", default="VaeDecodeStructureTrellis2",
                    help="With --extract: only accept runs containing this node class (default: %(default)s)")
     p.add_argument("--csv", help="With --run: also write timings CSV to this path")
+    p.add_argument("--gpu", action="store_true",
+                   help="With --run: sample nvidia-smi every second, report peak VRAM")
     p.add_argument("--top", type=int, default=25, help="With --run: rows in the summary table (0 = all)")
     p.add_argument("--timeout", type=float, default=1800, help="With --run: max seconds to wait")
     args = p.parse_args()
