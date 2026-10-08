@@ -84,13 +84,12 @@ damage. Cause undetermined; recorded here for honesty.
 
 | Metric | int8 (calibrated) | NVFP4 (ours) | bf16 |
 |--------|-------------------|--------------|------|
-| Checkpoint | 4.89 GB | 2.81 GB | 9.63 GB |
+| Checkpoint | 4.89 GB | **2.81 GB** | 9.63 GB |
 | Cold full run | **370.8 s** | 414.3 s | 372.6 s |
+| Cold full run, `--use-sage-attention` | **331.7 s** (int8 only) | — | — |
 | Hot rerun | 0.1 s | 0.1 s | 0.3 s |
-| KSampler 23 / 12 (s) | 63.3 / 33.6 | 73.5 / 38.4 | 82.5 / 43.6 |
-| KSampler 18 / 3 (s) | 8.8 / 6.7 | 7.7 / 13.4 | 9.1 / 9.6 |
-| Peak VRAM (cold) | 80.1% (13.1 GB) | 81.0% (13.2 GB) | **91.5% (14.9 GB)** |
-| Shape mesh verts | 7.82M | **9.79M** | 7.87M |
+| Peak VRAM (cold) | 80.1% (13.1 GB) | 81.0% (13.2 GB) | 91.5% (14.9 GB) |
+| Shape mesh verts | 7.82M | 9.79M | 7.87M |
 | GLB (clean runs) | 68.8 MB | 74.1 MB | 64.9 MB |
 
 Sampler-time ordering is clean (int8 < nvfp4 < bf16) on the two big stages.
@@ -139,9 +138,17 @@ Recommendation: remesh 512 is the canonical setting in this env.
 2. Cheap wins with no visible cost: AO 512/32 (−55 s), Remesh 512 (~−41 s
    combined effect). Texture 2K saves little (−12 s) for visible softening.
 3. NVFP4 4-bit DiT **works end-to-end** (2.81 GB, loads in 1 s) where naive
-   fp8 fails — but is not faster overall here and needs a final visual verdict.
+   fp8 fails — but is not faster overall here; final visual verdict pending.
 4. bf16 in this env: loads and runs fine (372.6 s cold); needs the most VRAM
    (91.5%).
+5. SageAttention 2.2.0 (+triton, `--use-sage-attention`) cuts sampling ~35%
+   (KSampler 23: 63 → 41 s; full int8 cold: 371 → 332 s) but does not change
+   the remesh defect pattern.
+6. Blade-defect root cause: version drift changed upstream meshes; unchanged
+   `RemeshMesh@768` drops thin walls. Canonical setting: remesh 512.
+7. Visual comparison grids (Blender 4.5, same light/camera):
+   `results/compare_std_opt_textured.png` and `results/compare_std_opt_clay.png`
+   — 2 settings rows × 3 quant columns. Scene script: `scripts/render_compare.py`.
 
 ## Files
 

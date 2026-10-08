@@ -127,9 +127,16 @@ evidence). Cold full runs on the same machine (Blender closed, fresh server):
 |--------|-------------------|--------------------|------|
 | Checkpoint | 4.89 GB | **2.81 GB** | 9.63 GB |
 | Cold full run | **370.8 s** | 414.3 s | 372.6 s |
+| Cold full run, `--use-sage-attention` | **331.7 s** (int8) | — | — |
 | Hot rerun (cache) | 0.1 s | 0.1 s | 0.3 s |
 | Peak VRAM (cold) | 80.1% | 81.0% | 91.5% |
 | Shape mesh verts | 7.82M | 9.79M | 7.87M |
+
+Visual comparison (Blender, same light/camera — standard vs optimized rows,
+bf16/int8/NVFP4 columns, textured + clay):
+
+![standard vs optimized, textured](results/compare_std_opt_textured.png)
+![standard vs optimized, clay](results/compare_std_opt_clay.png)
 
 Findings: sampling is only ~30% of the time; the mesh/texture post-processing
 dominates. Cheap wins: AO bake 1024/64 → 512/32 (−55 s), Remesh 768 → 512
