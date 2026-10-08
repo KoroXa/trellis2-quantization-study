@@ -100,6 +100,39 @@ Per-node variance across runs is real (e.g. upsample stage 1–14 s), so
 single-digit differences should not be over-read; the table above is one cold
 run per config.
 
+## Blade-defect investigation (Oct 8 runs)
+
+Symptom: meshes missing blade/handle chunks in the new env (v0.39.0,
+torch 2.14), while the Oct 6 battle (3dd559d8, torch 2.12) had none — same
+checkpoints, same seeds, same workflow file.
+
+Ruled out (with evidence):
+- Conditioning switch: Pixal3D conditioning does NOT fix it — a dedicated run
+  collapsed the structure stage entirely (`Trellis2 coords can't be empty`,
+  exp08). The Pixal3D path needs its own framing (pad 1.1) and is a separate
+  configuration, not the battle's.
+- Attention backend: installing SageAttention 2.2.0 (+triton) and rerunning
+  with `--use-sage-attention` gave faster sampling (KSampler 23: 63 → 41 s)
+  but the same truncated pattern. Backend is not the cause (but is a speedup).
+- Mesh code: `remesh.py`, `qem_decimate.py`, `nodes_mesh_postprocess.py` are
+  byte-identical between the two ComfyUI versions.
+
+Confirmed pattern (final-mesh bounds + silhouettes in `results/perf/`):
+
+| Config | remesh | Blade/handle |
+|--------|--------|--------------|
+| int8 | 768 | missing chunk (5 runs) |
+| int8 | 512 | whole (2 runs) |
+| bf16 | 768 | worst, blade + handle (1 run) |
+| bf16 | 512 | whole, full extents (exp09, silhouette-confirmed) |
+| nvfp4 | 768 | whole, 2/2 (denser upstream mesh survives) |
+
+Root cause: version drift in sampling numerics (torch 2.12 → 2.14 SDPA and/or
+ComfyUI changes) altered the upstream shape meshes (bf16 shape mesh:
+6.49M → 7.87M verts at identical seeds). `RemeshMesh@768` (unchanged code)
+drops the now-thinner blade walls; `@512` is coarse enough to keep them.
+Recommendation: remesh 512 is the canonical setting in this env.
+
 ## Conclusions
 
 1. The pipeline bottleneck is post-processing (~70%), not sampling (~30%).
