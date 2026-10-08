@@ -63,9 +63,9 @@ Place files under `ComfyUI/models/` (see workflow metadata for HF URLs):
 | Node id | Type | Saved value | Role |
 |---------|------|-------------|------|
 | **40** | `UNETLoader` | `trellis_2_int8_convrot.safetensors`, `weight_dtype=default` | shape / structure DiT — swap to `trellis_2_bf16.safetensors` for baseline |
-| **319** | `UNETLoader` | `pixal3d_int8_convrot.safetensors`, `weight_dtype=default` | texture / related DiT (int8 in the saved graph) |
+| **319** | `UNETLoader` | `trellis_2_int8_convrot.safetensors`, `weight_dtype=default` | inactive Trellis branch input (retargeted from `pixal3d_int8_convrot.safetensors`, which is not installed; the loader file must exist or queue validation rejects the prompt) |
 | **122** | `LoadImage` | `viking_wolf_rune_axe.png` | input image |
-| **316** | `PrimitiveBoolean` | “Switch to Trellis2” | graph switch (title in UI) |
+| **316** | `PrimitiveBoolean` | `true` — “Switch to Trellis2” (title in UI) | `true` routes switches 314/315/318 to the Trellis.2 branch (node 40 + `Trellis2Conditioning`); `false` would select the Pixal3D branch (inactive, model not installed) |
 
 The saved workflow ships with **int8** unet names selected. For the bf16 baseline
 run, set node **40** `unet_name` to `trellis_2_bf16.safetensors` (and texture unet

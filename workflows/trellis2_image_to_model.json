@@ -2087,12 +2087,12 @@
       "widgets_values": [
         768,
         "udf",
-        false,
-        false,
-        false,
+        true,
+        true,
+        true,
         1,
         0,
-        false,
+        true,
         20,
         0.01,
         20000000
@@ -3236,10 +3236,10 @@
         }
       },
       "widgets_values": [
-        false
+        true
       ],
       "widgets_values_named": {
-        "switch": false
+        "switch": true
       }
     },
     {
@@ -3301,10 +3301,10 @@
         }
       },
       "widgets_values": [
-        false
+        true
       ],
       "widgets_values_named": {
-        "switch": false
+        "switch": true
       }
     },
     {
@@ -3345,10 +3345,10 @@
         }
       },
       "widgets_values": [
-        false
+        true
       ],
       "widgets_values_named": {
-        "value": false
+        "value": true
       },
       "color": "#322",
       "bgcolor": "#533"
@@ -3445,10 +3445,10 @@
         }
       },
       "widgets_values": [
-        false
+        true
       ],
       "widgets_values_named": {
-        "switch": false
+        "switch": true
       }
     },
     {
@@ -3481,8 +3481,8 @@
         "Node name for S&R": "UNETLoader",
         "models": [
           {
-            "name": "pixal3d_int8_convrot.safetensors",
-            "url": "https://huggingface.co/Comfy-Org/Pixal3D/resolve/main/diffusion_models/pixal3d_int8_convrot.safetensors",
+            "name": "trellis_2_int8_convrot.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/TRELLIS.2/resolve/main/diffusion_models/trellis_2_int8_convrot.safetensors",
             "directory": "diffusion_models"
           }
         ],
@@ -3493,11 +3493,11 @@
         }
       },
       "widgets_values": [
-        "pixal3d_int8_convrot.safetensors",
+        "trellis_2_int8_convrot.safetensors",
         "default"
       ],
       "widgets_values_named": {
-        "unet_name": "pixal3d_int8_convrot.safetensors",
+        "unet_name": "trellis_2_int8_convrot.safetensors",
         "weight_dtype": "default"
       },
       "color": "#322",
