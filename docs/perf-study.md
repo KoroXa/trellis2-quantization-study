@@ -85,12 +85,14 @@ damage. Cause undetermined; recorded here for honesty.
 | Metric | int8 (calibrated) | NVFP4 (ours) | bf16 |
 |--------|-------------------|--------------|------|
 | Checkpoint | 4.89 GB | **2.81 GB** | 9.63 GB |
-| Cold full run | **370.8 s** | 414.3 s | 372.6 s |
-| Cold full run, `--use-sage-attention` | **331.7 s** (int8 only) | — | — |
+| Cold full run, standard | **370.8 s** | 414.3 s | 372.6 s |
+| Cold full run, optimized combo | **236.8 s** | 269.7 s | 276.8 s |
+| Cold full run, `--use-sage-attention` | **331.7 s** (int8 standard only) | — | — |
 | Hot rerun | 0.1 s | 0.1 s | 0.3 s |
-| Peak VRAM (cold) | 80.1% (13.1 GB) | 81.0% (13.2 GB) | 91.5% (14.9 GB) |
-| Shape mesh verts | 7.82M | 9.79M | 7.87M |
-| GLB (clean runs) | 68.8 MB | 74.1 MB | 64.9 MB |
+| Peak VRAM, standard (cold) | 80.1% (13.1 GB) | 81.0% (13.2 GB) | 91.5% (14.9 GB) |
+| Peak VRAM, optimized combo (cold) | 89.3% (14.6 GB) | **73.5% (12.0 GB)** | 92.6% (15.1 GB) |
+| Shape mesh verts (standard) | 7.82M | 9.79M | 7.87M |
+| GLB standard / optimized | 68.8 / ~31 MB | 74.1 / ~32 MB | 64.9 / ~31 MB |
 
 Sampler-time ordering is clean (int8 < nvfp4 < bf16) on the two big stages.
 Totals are dominated by mesh-pipeline variance: NVFP4's total is higher mostly

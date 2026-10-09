@@ -127,9 +127,10 @@ evidence). Cold full runs on the same machine (Blender closed, fresh server):
 |--------|-------------------|--------------------|------|
 | Checkpoint | 4.89 GB | **2.81 GB** | 9.63 GB |
 | Cold full run | **370.8 s** | 414.3 s | 372.6 s |
+| Cold full run, optimized combo | **236.8 s** | 269.7 s | 276.8 s |
 | Cold full run, `--use-sage-attention` | **331.7 s** (int8) | — | — |
 | Hot rerun (cache) | 0.1 s | 0.1 s | 0.3 s |
-| Peak VRAM (cold) | 80.1% | 81.0% | 91.5% |
+| Peak VRAM, standard / combo (cold) | 80.1% / 89.3% | 81.0% / **73.5%** | 91.5% / 92.6% |
 | Shape mesh verts | 7.82M | 9.79M | 7.87M |
 
 Visual comparison (Blender, same light/camera — standard vs optimized rows,
