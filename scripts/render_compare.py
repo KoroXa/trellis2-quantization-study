@@ -4,26 +4,45 @@ Rows (shelves, Z offset): standard (baseline postprocess) on top,
 optimized (combo) at bottom. Columns (X): bf16 | int8 | nvfp4.
 Renders textured, then swaps to a shared clay material and renders again.
 
+Cell layout (column x, row z, GLB file argument):
+
+  std-bf16   (-2.6, +1.5)    std-int8   (0.0, +1.5)    std-nvfp4   (+2.6, +1.5)
+  opt-bf16   (-2.6, -1.5)    opt-int8   (0.0, -1.5)    opt-nvfp4   (+2.6, -1.5)
+
 Usage:
-  blender.exe --background --python render_compare.py -- <out_textured> <out_clay>
+  blender.exe --background --python render_compare.py --
+      <out_textured> <out_clay> [--models-dir DIR]
+      [--std-bf16 F] [--std-int8 F] [--std-nvfp4 F]
+      [--opt-bf16 F] [--opt-int8 F] [--opt-nvfp4 F]
 """
+import argparse
 import bpy
 import math
 import os
 import sys
 
-argv = sys.argv[sys.argv.index("--") + 1:]
-OUT_TEX, OUT_CLAY = argv[0], argv[1]
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("out_tex", help="output PNG path (textured render)")
+parser.add_argument("out_clay", help="output PNG path (clay render)")
+parser.add_argument("--models-dir", default=r"E:\AI\ComfyUI_windows_portable\ComfyUI\output\3d")
+parser.add_argument("--std-bf16", default="ComfyUI_00011.glb")
+parser.add_argument("--std-int8", default="ComfyUI_00010.glb")
+parser.add_argument("--std-nvfp4", default="ComfyUI_00009.glb")
+parser.add_argument("--opt-bf16", default="ComfyUI_00014.glb")
+parser.add_argument("--opt-int8", default="ComfyUI_00007.glb")
+parser.add_argument("--opt-nvfp4", default="ComfyUI_00015.glb")
+args = parser.parse_args(sys.argv[sys.argv.index("--") + 1:])
+OUT_TEX, OUT_CLAY = args.out_tex, args.out_clay
 
-MODELS_DIR = r"E:\AI\ComfyUI_windows_portable\ComfyUI\output\3d"
+MODELS_DIR = args.models_dir
 CELLS = [
     # (filename, col_x, row_z, label)
-    ("ComfyUI_00011.glb", -2.6, +1.5, "bf16_std"),
-    ("ComfyUI_00010.glb", 0.0, +1.5, "int8_std"),
-    ("ComfyUI_00009.glb", +2.6, +1.5, "nvfp4_std"),
-    ("ComfyUI_00014.glb", -2.6, -1.5, "bf16_opt"),
-    ("ComfyUI_00007.glb", 0.0, -1.5, "int8_opt"),
-    ("ComfyUI_00015.glb", +2.6, -1.5, "nvfp4_opt"),
+    (args.std_bf16, -2.6, +1.5, "bf16_std"),
+    (args.std_int8, 0.0, +1.5, "int8_std"),
+    (args.std_nvfp4, +2.6, +1.5, "nvfp4_std"),
+    (args.opt_bf16, -2.6, -1.5, "bf16_opt"),
+    (args.opt_int8, 0.0, -1.5, "int8_opt"),
+    (args.opt_nvfp4, +2.6, -1.5, "nvfp4_opt"),
 ]
 
 # --- clean scene ---
