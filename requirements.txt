@@ -6,6 +6,8 @@
 # (CUDA builds with fp8 support; CPU-only torch may not cast as expected).
 torch>=2.2
 safetensors>=0.4
+# Pillow is only needed for the grid-labeling helpers (scripts/label_*.py).
+Pillow>=9
 # NOT covered here (need ComfyUI's own Python environment):
 # - scripts/quant_bf16_to_nvfp4.py needs `comfy` (comfy.quant_ops) plus a
 #   comfy-kitchen build with NVFP4 support and a Blackwell (or newer) GPU.
