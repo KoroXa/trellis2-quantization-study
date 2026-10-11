@@ -159,8 +159,10 @@ and `exp13_bf16_seedB.api.json`.
 6. Blade-defect root cause: version drift changed upstream meshes; unchanged
    `RemeshMesh@768` drops thin walls. Canonical setting: remesh 512.
 7. Visual comparison grids (Blender 4.5, same light/camera):
-   `results/compare_std_opt_textured.png` and `results/compare_std_opt_clay.png`
-   — 2 settings rows × 3 quant columns. Scene script: `scripts/render_compare.py`.
+   `results/compare_3quant_annotated.png` (2 settings rows × 3 quant columns,
+   with cold times and peak VRAM) and `results/compare_3quant_angle2.png`
+   (clean second angle), plus `results/compare_std_opt_clay.png` (geometry).
+   Scene script: `scripts/render_compare.py`.
 
 ## Files
 
