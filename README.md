@@ -140,7 +140,7 @@ bf16/int8/NVFP4 columns, textured + clay):
 
 ![annotated 2x3 comparison with timings](results/compare_3quant_annotated.png)
 ![second angle, no labels](results/compare_3quant_angle2.png)
-![clay geometry comparison](results/compare_std_opt_clay.png)
+![clay geometry comparison](results/compare_3quant_clay.png)
 
 Findings: sampling is only ~30% of the time; the mesh/texture post-processing
 dominates. Cheap wins: AO bake 1024/64 → 512/32 (−55 s), Remesh 768 → 512
