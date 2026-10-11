@@ -19,19 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-Third-party notice
-
-This license applies only to original code and documentation in this
-repository (scripts written for this study, README, and the issue draft).
-
-TRELLIS.2, Pixal3D, ComfyUI, and all model weights remain under their
-upstream licenses (Comfy-Org / Microsoft / model authors). This repository
-does not relicense them and does not redistribute model weights.
-
-The workflow graph is based on Comfy-Org workflow templates; see those
-repositories for their terms. The input test image (`input/`) is a
-non-commercial research asset (same motif as the official template input);
-do not use it commercially.
