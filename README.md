@@ -301,5 +301,10 @@ If something looks off, open an issue or PR.
 
 - The repository and upstream bug report are published.
 - Performance study done (bottleneck map, AO/remesh wins, NVFP4 4-bit end-to-end).
-  Open: final visual verdict on the NVFP4 mesh; KSampler-23 (63–83 s) remains
-  the largest single stage — torch.compile / attention flags not yet tried.
+- SageAttention 2.2.0 tested: sampling ~35% faster (KSampler 23: 63 → 41 s,
+  full int8 cold 371 → 332 s), geometry defect pattern unchanged
+  (see `docs/perf-study.md`). torch.compile on the DiT not tried.
+- Open (future work): final visual verdict on NVFP4 texture maps;
+  torch.compile experiment; KSampler-23 (63–83 s) remains the largest
+  single stage. Comparisons and measurements are published; these two
+  items stay open.
