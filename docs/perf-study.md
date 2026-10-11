@@ -134,12 +134,15 @@ ComfyUI changes) altered the upstream shape meshes (bf16 shape mesh:
 drops the now-thinner blade walls; `@512` is coarse enough to keep them.
 Recommendation: remesh 512 is the canonical setting in this env.
 
-Seed dependence (exp12): the same int8 standard config with a different seed
+Seed dependence (exp12, exp13): the same int8 standard config with a different seed
 set (100/101/102/103 instead of 56/42/42/43) produced a **whole** axe —
 blade, wolf head and handle complete, just posed differently (281 s).
+bf16 with the same seed set B also produced a **whole gorgeous** axe
+(323.7 s, `results/perf/bf16_seedB_turntable.png`).
 So the defect is seed-dependent, not universal: some seeds land in good
 regions, some don't. All comparisons in this study keep one fixed seed set
-for honesty; seed set B is recorded as `workflows/exp/exp12_int8_std_seedB.api.json`.
+for honesty; seed set B is recorded as `workflows/exp/exp12_*_seedB.api.json`
+and `exp13_bf16_seedB.api.json`.
 
 ## Conclusions
 
