@@ -169,8 +169,11 @@ dominates. Cheap wins: AO bake 1024/64 → 512/32 (−55 s), Remesh 768 → 512
 layers) loads in ~1 s through the quantized-weights path and generates a
 valid dense mesh. Naive fp8 fails at load on stock ComfyUI; with a one-line
 local patch it loads but the structure stage returned empty (cause not
-isolated) — so the two are not directly comparable; final visual verdict
-pending.
+isolated) — so the two are not directly comparable. Visual verdict (this test
+case): the NVFP4 output had the simplest overall appearance and the least
+clear textures, with some details difficult to interpret; the handle also
+differed. This describes one generated result, not a general NVFP4 property
+— outputs may depend on seed and generation factors.
 
 ## Reproduction
 
@@ -333,7 +336,6 @@ If something looks off, open an issue or PR.
 - SageAttention 2.2.0 tested: sampling ~35% faster (KSampler 23: 63 → 41 s,
   full int8 cold 371 → 332 s), geometry defect pattern unchanged
   (see `docs/perf-study.md`). torch.compile on the DiT not tried.
-- Open (future work): final visual verdict on NVFP4 texture maps;
-  torch.compile experiment; KSampler-23 (63–83 s) remains the largest
-  single stage. Comparisons and measurements are published; these two
-  items stay open.
+- Open (future work): torch.compile experiment; KSampler-23 (63–83 s) remains
+  the largest single stage. Comparisons, measurements and the NVFP4 visual
+  verdict are published; torch.compile stays open.

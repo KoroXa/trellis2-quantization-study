@@ -70,9 +70,12 @@ Motivation: naive fp8 (no scales) fails (see `docs/upstream-issue.md`); a real
 - Full generation **completes**: valid dense mesh, 9.79M verts (vs 7.82M int8,
   7.87M bf16). Per-tensor + block scaling is designed to avoid naive-fp8-style
   underflow; weight-level error was not measured across the checkpoint here.
-- Caveat: baked texture maps look flatter with speckles vs int8/bf16 on flat
-  UV previews (`results/perf/tex_nvfp4_4bit.png`). Final 3D verdict pending
-  visual inspection.
+- Visual verdict (this test case): the NVFP4 output had the simplest overall
+  appearance and the least clear textures, with some details difficult to
+  interpret. The handle also differed from the other outputs. These
+  observations describe this particular generated result, not a general
+  property of NVFP4: the outputs may depend on the seed and other generation
+  factors, and all models require some refinement.
 
 Note: minimal standalone `safe_open` probes segfaulted on the 10 GB bf16 file
 in this env (VAE-bf16 and int8 files read fine; header/size/bytes verified
@@ -155,8 +158,9 @@ and `exp13_bf16_seedB.api.json`.
    combined effect). Texture 2K saves little (−12 s) for visible softening.
 3. NVFP4 4-bit DiT **works end-to-end** (2.81 GB, loads in 1 s through the
    quantized-weights path) — but is not faster overall here; naive fp8 is not
-   a valid baseline for it (fails at load on stock ComfyUI; final visual
-   verdict pending.
+   a valid baseline for it (fails at load on stock ComfyUI). Visual verdict:
+   simplest appearance and least clear textures of the three in this test
+   case — a single-result observation, not a general NVFP4 property.
 4. bf16 in this env: loads and runs fine (372.6 s cold); needs the most VRAM
    (91.5%).
 5. SageAttention 2.2.0 (+triton, `--use-sage-attention`) cuts sampling ~35%
