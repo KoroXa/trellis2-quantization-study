@@ -11,6 +11,6 @@ relicense them and does not redistribute model weights:
   model authors).
 - The workflow graph, based on Comfy-Org workflow templates — see those
   repositories for their terms.
-- The test input motif (`viking_wolf_rune_axe`, official template input linked
-  from the README, not shipped here): a non-commercial research asset, not
-  for commercial use.
+- The test input files (`input/viking_wolf_rune_axe.jpg|.png`, same motif as
+  the official template input) ship in this repository: free to distribute,
+  non-commercial research asset, not for commercial use.

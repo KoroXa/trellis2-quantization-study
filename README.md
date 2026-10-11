@@ -52,13 +52,14 @@ Naive fp8 is a diagnostic cast, not a production quantization method.
 ## Input image
 
 Workflow node `LoadImage` (node id **122**) expects `viking_wolf_rune_axe.png`
-in ComfyUI's `input/` folder. The file is **not** shipped in this repository —
-download it from the official Comfy-Org template:
+in ComfyUI's `input/` folder.
 
+- Shipped in this repo: `input/viking_wolf_rune_axe.png` (true PNG, converted
+  from local JPEG copy `input/viking_wolf_rune_axe.jpg`). Free to distribute,
+  non-commercial research asset (see `NOTICE.md`).
+- Official template image for reference:
   https://raw.githubusercontent.com/Comfy-Org/workflow_templates/refs/heads/main/input/viking_wolf_rune_axe.png
-
-Any clean product-style object image works under that filename. See
-`NOTICE.md` for the test-asset terms.
+- Any clean product-style object image works under that filename.
 
 ## Models required by the workflow
 
@@ -273,12 +274,14 @@ independently proposed in [PR #16828](https://github.com/Comfy-Org/ComfyUI/pull/
 | bf16 / int8 meshes, timings, VRAM | Local runs of this study |
 | ComfyUI TRELLIS.2 runtime + workflow graph | Comfy-Org / community |
 | Calibrated int8 checkpoint | Comfy-Org (`trellis_2_int8_convrot`) |
-| Input test image | Official Comfy-Org template input (linked, not shipped — see Input image) |
+| Input test image | Shipped in `input/` (free to distribute, non-commercial — see `NOTICE.md`) |
 | Bug report draft | This study → reported as [Comfy-Org/ComfyUI#16827](https://github.com/Comfy-Org/ComfyUI/issues/16827); fix proposed in [PR #16828](https://github.com/Comfy-Org/ComfyUI/pull/16828) by another contributor (open, awaiting maintainer review as of 2026-10-11) |
 
 ## Repository layout
 
 ```
+input/
+  viking_wolf_rune_axe.jpg|.png   # test input (PNG is a converted copy of the local JPEG)
 scripts/
   quant_bf16_to_fp8.py            # research-only: 2D *.weight -> fp8_e4m3fn (CLI, no scale)
   quant_bf16_to_nvfp4.py          # research-only: 2D *.weight -> ComfyUI NVFP4 (CLI, per-tensor + block scales)
