@@ -68,8 +68,8 @@ Motivation: naive fp8 (no scales) fails (see `docs/upstream-issue.md`); a real
 - Loads in ComfyUI in ~1 s, constructs without the fp8 `arange` crash
   (quantized path keeps bf16 compute dtype), 840 `quant_format=nvfp4` modules.
 - Full generation **completes**: valid dense mesh, 9.79M verts (vs 7.82M int8,
-  7.87M bf16). Round-trip weight error ~9% relative (vs 2–6% for naive fp8,
-  but without fp8's catastrophic 15% zero-underflow).
+  7.87M bf16). Per-tensor + block scaling is designed to avoid naive-fp8-style
+  underflow; weight-level error was not measured across the checkpoint here.
 - Caveat: baked texture maps look flatter with speckles vs int8/bf16 on flat
   UV previews (`results/perf/tex_nvfp4_4bit.png`). Final 3D verdict pending
   visual inspection.
@@ -136,7 +136,7 @@ meshes changed (bf16 shape mesh: 6.49M → 7.87M verts at identical seeds).
 the thinner blade walls; `@512` is coarse enough to keep them. This study did
 not isolate the PyTorch/SDPA contribution from the ComfyUI-code contribution,
 so no stronger causal claim is made.
-Recommendation: remesh 512 is the canonical setting in this env.
+Recommendation: remesh 512 is the recommended default for these seeds.
 
 Seed dependence (exp12, exp13): the same int8 standard config with a different seed
 set (100/101/102/103 instead of 56/42/42/43) produced a **whole** axe —
@@ -151,10 +151,12 @@ and `exp13_bf16_seedB.api.json`.
 ## Conclusions
 
 1. The pipeline bottleneck is post-processing (~70%), not sampling (~30%).
-2. Cheap wins with no visible cost: AO 512/32 (−55 s), Remesh 512 (~−41 s
+2. Cheap wins with no visible cost on the inspected seeds: AO 512/32 (−55 s), Remesh 512 (~−41 s
    combined effect). Texture 2K saves little (−12 s) for visible softening.
-3. NVFP4 4-bit DiT **works end-to-end** (2.81 GB, loads in 1 s) where naive
-   fp8 fails — but is not faster overall here; final visual verdict pending.
+3. NVFP4 4-bit DiT **works end-to-end** (2.81 GB, loads in 1 s through the
+   quantized-weights path) — but is not faster overall here; naive fp8 is not
+   a valid baseline for it (fails at load on stock ComfyUI; final visual
+   verdict pending.
 4. bf16 in this env: loads and runs fine (372.6 s cold); needs the most VRAM
    (91.5%).
 5. SageAttention 2.2.0 (+triton, `--use-sage-attention`) cuts sampling ~35%
@@ -162,7 +164,8 @@ and `exp13_bf16_seedB.api.json`.
    the remesh defect pattern.
 6. Blade-defect likely explanation: sampling drift across environments changed
    upstream meshes; unchanged `RemeshMesh@768` drops thin walls (PyTorch vs
-   ComfyUI contributions not isolated). Canonical setting: remesh 512.
+   ComfyUI contributions not isolated). Recommended default for these seeds:
+   remesh 512.
 7. Visual comparison grids (Blender 4.5, same light/camera):
    `results/compare_3quant_annotated.png` (2 settings rows × 3 quant columns,
    with cold times and peak VRAM) and `results/compare_3quant_angle2.png`

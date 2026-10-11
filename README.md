@@ -8,6 +8,21 @@ produced in this repo.
   workflow, seeds 56 / 42 / 43. Treat them as a diagnostic record, not a claim
   that one dtype is "best".
 - Model weights are **not** stored in this repository.
+- All meshes in this study come from a single input image — the main scope
+  limitation.
+
+## Key findings
+
+- int8 calibrated ≈ bf16 visually on 3 seeds (KSampler shape 91 → 66 s),
+  end-to-end roughly equal (371 vs 373 s cold); post-processing dominates.
+- Naive fp8 crashes at load (unet_dtype vs supported dtypes) — reported
+  upstream as [Comfy-Org/ComfyUI#16827](https://github.com/Comfy-Org/ComfyUI/issues/16827).
+- NVFP4 4-bit (ours, 2.81 GB) loads via ComfyUI's quantized-weights path and
+  generates; not faster end-to-end here.
+- Post-processing tuning (AO 512/32, remesh 512, tex 2K, decimate 350K) cut
+  cold wall time by 26–36% depending on model.
+- Blade defect is seed-dependent; remesh 512 heals it on the tested seeds
+  (details: [docs/perf-study.md](docs/perf-study.md)).
 
 ## Task
 
@@ -37,16 +52,13 @@ Naive fp8 is a diagnostic cast, not a production quantization method.
 ## Input image
 
 Workflow node `LoadImage` (node id **122**) expects `viking_wolf_rune_axe.png`
-in ComfyUI's `input/` folder.
+in ComfyUI's `input/` folder. The file is **not** shipped in this repository —
+download it from the official Comfy-Org template:
 
-- Local input image used for the runs: `input/viking_wolf_rune_axe.png`
-  (true PNG, converted from a local JPEG copy `input/viking_wolf_rune_axe.jpg`).
-- Official template image is linked separately:
   https://raw.githubusercontent.com/Comfy-Org/workflow_templates/refs/heads/main/input/viking_wolf_rune_axe.png
-- Any clean product-style object image works; this axe was used for the runs
-  below. Local and official files are **not** asserted to be byte-identical.
-- The test image is a non-commercial research asset, not for commercial use
-  (see `LICENSE`, third-party notice).
+
+Any clean product-style object image works under that filename. See
+`NOTICE.md` for the test-asset terms.
 
 ## Models required by the workflow
 
@@ -123,7 +135,10 @@ was produced. See [docs/upstream-issue.md](docs/upstream-issue.md).
 
 Bottleneck map and speedup levers for the full pipeline (see
 [docs/perf-study.md](docs/perf-study.md) for method, per-node tables and
-evidence). Cold full runs on the same machine (Blender closed, fresh server):
+evidence). Cold full runs on the same machine (Blender closed, fresh server).
+Battle rows above ran on ComfyUI 3dd559d8 + torch 2.12; rows below on
+b0b74356 + torch 2.14 — cross-table deltas mix env change with dtype effects.
+Vertex counts are scale context, not a quality metric.
 
 | Metric | int8 (calibrated) | NVFP4 (this study) | bf16 |
 |--------|-------------------|--------------------|------|
@@ -142,11 +157,19 @@ bf16/int8/NVFP4 columns, textured + clay):
 ![second angle, no labels](results/compare_3quant_angle2.png)
 ![clay geometry comparison](results/compare_3quant_clay.png)
 
+On seed set A, int8/bf16 meshes lost blade chunks at remesh768 while NVFP4
+stayed whole; remesh512 healed int8 (2 runs) and bf16 (1 run) — small sample.
+A different seed set gave whole blades at 768 too, so the defect is
+seed-dependent, not a quant verdict (details: [docs/perf-study.md](docs/perf-study.md)).
+
 Findings: sampling is only ~30% of the time; the mesh/texture post-processing
 dominates. Cheap wins: AO bake 1024/64 → 512/32 (−55 s), Remesh 768 → 512
 (~−41 s combined). NVFP4 4-bit DiT (`scripts/quant_bf16_to_nvfp4.py`, 840
-layers) loads in ~1 s and generates a valid dense mesh where naive fp8 fails —
-but is not faster end-to-end here; final visual verdict pending.
+layers) loads in ~1 s through the quantized-weights path and generates a
+valid dense mesh. Naive fp8 fails at load on stock ComfyUI; with a one-line
+local patch it loads but the structure stage returned empty (cause not
+isolated) — so the two are not directly comparable; final visual verdict
+pending.
 
 ## Reproduction
 
@@ -239,7 +262,8 @@ With a local one-liner forcing RoPE coordinate dtype to a supported type, the
 model constructed and sampling started. The structure stage then produced an
 empty coordinate layout (`Trellis2 coords can't be empty`). Cause **not**
 asserted; may or may not relate to naive fp8 weights. The patch was **reverted**
-and is not shipped as a fix.
+and is not shipped as a fix. A similar one-line RoPE-dtype patch was
+independently proposed in [PR #16828](https://github.com/Comfy-Org/ComfyUI/pull/16828).
 
 ## What is mine vs third-party
 
@@ -249,52 +273,54 @@ and is not shipped as a fix.
 | bf16 / int8 meshes, timings, VRAM | Local runs of this study |
 | ComfyUI TRELLIS.2 runtime + workflow graph | Comfy-Org / community |
 | Calibrated int8 checkpoint | Comfy-Org (`trellis_2_int8_convrot`) |
-| Input test image | Local asset used with Comfy-Org workflow template |
-| Bug report draft | This study → [ComfyUI issues](https://github.com/comfyanonymous/ComfyUI/issues) |
+| Input test image | Official Comfy-Org template input (linked, not shipped — see Input image) |
+| Bug report draft | This study → reported as [Comfy-Org/ComfyUI#16827](https://github.com/Comfy-Org/ComfyUI/issues/16827); fix proposed in [PR #16828](https://github.com/Comfy-Org/ComfyUI/pull/16828) by another contributor (open, awaiting maintainer review as of 2026-10-11) |
 
 ## Repository layout
 
 ```
-input/
-  viking_wolf_rune_axe.jpg|.png   # test input (PNG is a converted copy of the local JPEG)
 scripts/
   quant_bf16_to_fp8.py            # research-only: 2D *.weight -> fp8_e4m3fn (CLI, no scale)
   quant_bf16_to_nvfp4.py          # research-only: 2D *.weight -> ComfyUI NVFP4 (CLI, per-tensor + block scales)
   compare_weights.py              # mae/mean|ref| + zero fractions between checkpoints
   profile_workflow.py             # per-node timing + VRAM profiler (--extract/--run/--list, --csv, --gpu)
+  glbstats.py / silh.py           # mesh stats + silhouette renders (diagnostics)
+  render_compare.py               # Blender 2x3 comparison scene (takes 6 GLB paths + 2 outputs, see --help)
+  label_usergrid.py               # labels for results/compare_3quant_clay.png
 workflows/
   trellis2_image_to_model.json    # canonical UI workflow (Trellis branch, 316=True)
   trellis2_image_to_model.api.json# captured API prompt (int8)
-  exp/                            # experiment API prompts (exp01-06, combo, bf16)
+  exp/                            # experiment API prompts (numbering has gaps)
 results/
   weight_damage.csv
   mesh_bf16_vs_int8.png
-  timings/                        # per-node CSVs + _gpu.csv VRAM logs (baseline, exp01-06, cold/hot)
-  perf/                           # AO/texture comparison previews
+  compare_3quant_annotated.png / compare_3quant_angle2.png / compare_3quant_clay.png
+  timings/                        # per-node CSVs + _gpu.csv VRAM logs (baseline, exp01-14, cold/hot)
+  perf/                           # AO/texture comparison previews (downscaled, ≤2 MB each)
 docs/
   upstream-issue.md               # draft issue for Comfy-Org/ComfyUI
   perf-study.md                   # bottleneck map, levers, NVFP4 study, final comparison
 requirements.txt
 LICENSE
+NOTICE.md
 .gitignore
 ```
 
 ## Licenses / terms
 
-- Study scripts and docs: MIT (see `LICENSE`).
+- Study scripts and docs: MIT (see `LICENSE`; third-party terms in `NOTICE.md`).
 - TRELLIS.2, Pixal3D, ComfyUI, and model weights remain under their upstream
-  licenses. This repo does **not** relicense them and does **not** redistribute
+  licenses. This repo **does not** relicense them and does **not** redistribute
   weights.
 - Workflow graph based on Comfy-Org templates — see those repositories for
-  their terms.
-- Input image: local test asset used for the runs; official template input is
-  linked separately and is not asserted to be byte-identical. If you
-  redistribute it, confirm you have the rights.
+  their terms (also noted in `NOTICE.md`).
 
 ## Disclosure
 
-This repository was prepared with AI-assisted tooling (OpenCode). All numbers
-and claims above were checked against local runs; no results are invented.
+This repository was prepared with AI-assisted tooling (OpenCode). Numbers come
+from local runs; the initial bf16/int8 comparison is an aggregate record
+(per-seed logs were not retained), performance-study numbers come from logs in
+`results/timings/` as stated inline. No results are invented.
 If something looks off, open an issue or PR.
 
 ## Next steps
