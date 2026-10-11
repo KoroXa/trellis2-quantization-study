@@ -148,7 +148,7 @@ but is not faster end-to-end here; final visual verdict pending.
 
 ## Reproduction
 
-### 1. Standalone scripts (no ComfyUI)
+### 1. Standalone scripts (no ComfyUI — `requirements.txt` suffices)
 
 ```bash
 pip install -r requirements.txt
@@ -158,6 +158,19 @@ python scripts/quant_bf16_to_fp8.py path/to/trellis_2_bf16.safetensors path/to/t
 
 # Compare two checkpoints (prints metrics; optional CSV)
 python scripts/compare_weights.py path/to/trellis_2_bf16.safetensors path/to/trellis_2_fp8_naive.safetensors --csv results/weight_damage.csv
+```
+
+### 1b. ComfyUI-dependent scripts (NOT covered by `requirements.txt`)
+
+Run these with ComfyUI's embedded Python:
+
+```bash
+# NVFP4 quantization: needs `comfy` (comfy.quant_ops), a comfy-kitchen build
+# with NVFP4 support, and a Blackwell (or newer) GPU
+python scripts/quant_bf16_to_nvfp4.py path/to/trellis_2_bf16.safetensors path/to/trellis_2_nvfp4.safetensors --ref path/to/trellis_2_int8_convrot.safetensors
+
+# Profiler: needs aiohttp (ships with ComfyUI); --gpu needs nvidia-smi
+python scripts/profile_workflow.py --run workflows/trellis2_image_to_model.api.json --csv results/timings/run.csv --gpu
 ```
 
 ### 2. ComfyUI workflow (meshes)

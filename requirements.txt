@@ -1,9 +1,13 @@
-# Standalone study scripts (no ComfyUI required).
+# This file covers ONLY the standalone scripts: compare_weights.py and
+# quant_bf16_to_fp8.py (plain torch + safetensors, no ComfyUI required).
 # Verified in this study with: Python 3.12.10, torch 2.12.1+cu130 (CUDA 13.0).
 # ComfyUI fp8 crash repro was also run on Python 3.13.14, torch 2.14.0+cu130.
 # Naive fp8 cast needs a PyTorch build that supports torch.float8_e4m3fn
 # (CUDA builds with fp8 support; CPU-only torch may not cast as expected).
 torch>=2.2
 safetensors>=0.4
-# profile_workflow.py --run additionally needs aiohttp (ships with ComfyUI;
-# run it with ComfyUI's embedded Python) and the nvidia-smi binary for --gpu.
+# NOT covered here (need ComfyUI's own Python environment):
+# - scripts/quant_bf16_to_nvfp4.py needs `comfy` (comfy.quant_ops) plus a
+#   comfy-kitchen build with NVFP4 support and a Blackwell (or newer) GPU.
+# - scripts/profile_workflow.py --run needs aiohttp (ships with ComfyUI) and
+#   the nvidia-smi binary for --gpu. Run both with ComfyUI's embedded Python.

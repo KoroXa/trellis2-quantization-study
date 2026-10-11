@@ -128,10 +128,14 @@ Confirmed pattern (final-mesh bounds + silhouettes in `results/perf/`):
 | bf16 | 512 | whole, full extents (exp09, silhouette-confirmed) |
 | nvfp4 | 768 | whole, 2/2 (denser upstream mesh survives) |
 
-Root cause: version drift in sampling numerics (torch 2.12 → 2.14 SDPA and/or
-ComfyUI changes) altered the upstream shape meshes (bf16 shape mesh:
-6.49M → 7.87M verts at identical seeds). `RemeshMesh@768` (unchanged code)
-drops the now-thinner blade walls; `@512` is coarse enough to keep them.
+Likely explanation (not isolated): the defect tracks the environment change —
+old env (torch 2.12, ComfyUI 3dd559d8) vs new env (torch 2.14, ComfyUI
+b0b74356) — with identical checkpoints, seeds and workflow. Upstream shape
+meshes changed (bf16 shape mesh: 6.49M → 7.87M verts at identical seeds).
+`RemeshMesh@768` code is byte-identical between the versions, so it now drops
+the thinner blade walls; `@512` is coarse enough to keep them. This study did
+not isolate the PyTorch/SDPA contribution from the ComfyUI-code contribution,
+so no stronger causal claim is made.
 Recommendation: remesh 512 is the canonical setting in this env.
 
 Seed dependence (exp12, exp13): the same int8 standard config with a different seed
@@ -156,8 +160,9 @@ and `exp13_bf16_seedB.api.json`.
 5. SageAttention 2.2.0 (+triton, `--use-sage-attention`) cuts sampling ~35%
    (KSampler 23: 63 → 41 s; full int8 cold: 371 → 332 s) but does not change
    the remesh defect pattern.
-6. Blade-defect root cause: version drift changed upstream meshes; unchanged
-   `RemeshMesh@768` drops thin walls. Canonical setting: remesh 512.
+6. Blade-defect likely explanation: sampling drift across environments changed
+   upstream meshes; unchanged `RemeshMesh@768` drops thin walls (PyTorch vs
+   ComfyUI contributions not isolated). Canonical setting: remesh 512.
 7. Visual comparison grids (Blender 4.5, same light/camera):
    `results/compare_3quant_annotated.png` (2 settings rows × 3 quant columns,
    with cold times and peak VRAM) and `results/compare_3quant_angle2.png`
