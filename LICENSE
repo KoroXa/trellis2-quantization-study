@@ -32,7 +32,6 @@ upstream licenses (Comfy-Org / Microsoft / model authors). This repository
 does not relicense them and does not redistribute model weights.
 
 The workflow graph is based on Comfy-Org workflow templates; see those
-repositories for their terms. The input image is a local test asset used with
-the Comfy-Org TRELLIS.2 workflow template; it is not asserted to be
-byte-identical to the official template input. If you redistribute it, confirm
-you have the rights to do so.
+repositories for their terms. The input test image (`input/`) is a
+non-commercial research asset (same motif as the official template input);
+do not use it commercially.

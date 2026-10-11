@@ -45,6 +45,8 @@ in ComfyUI's `input/` folder.
   https://raw.githubusercontent.com/Comfy-Org/workflow_templates/refs/heads/main/input/viking_wolf_rune_axe.png
 - Any clean product-style object image works; this axe was used for the runs
   below. Local and official files are **not** asserted to be byte-identical.
+- The test image is a non-commercial research asset, not for commercial use
+  (see `LICENSE`, third-party notice).
 
 ## Models required by the workflow
 
