@@ -1,5 +1,7 @@
 # TRELLIS.2 quantization study (bf16 vs int8 vs naive fp8)
 
+English | [Русский](README.ru.md)
+
 Preliminary, non-benchmark study of ComfyUI TRELLIS.2 DiT weight dtypes:
 bf16 baseline, a calibrated int8 checkpoint (third-party), and a naive fp8 cast
 produced in this repo.
@@ -103,7 +105,7 @@ aggregate record from the study runs.
 | Metric | bf16 baseline | int8 calibrated |
 |--------|---------------|-----------------|
 | KSampler time (shape) | ~91 s | ~66 s |
-| Full prompt time | 292.31 s | 277.77 s |
+| Full prompt time (initial bf16/int8 comparison) | 292.31 s | 277.77 s |
 | Staged VRAM (approx., from run logs) | 9854 MB | 5004 MB |
 | Mesh vertices | 6.49 M | 7.66 M |
 | Load / crash | OK | OK |
@@ -121,6 +123,9 @@ Visual comparison: on these three seeds the meshes are **visually comparable**
 **not** a claim that int8 ≡ bf16 in general — only what we observed here.
 
 Post-processing time (~210 s) is excluded from the KSampler numbers above.
+These full-prompt timings come from the initial bf16/int8 comparison; they are
+separate from the later cold-run performance study below, which used a different
+ComfyUI/PyTorch environment and a separate run protocol.
 
 ### fp8 (naive) — not measured as a full run
 
@@ -136,7 +141,11 @@ was produced. See [docs/upstream-issue.md](docs/upstream-issue.md).
 
 Bottleneck map and speedup levers for the full pipeline (see
 [docs/perf-study.md](docs/perf-study.md) for method, per-node tables and
-evidence). Cold full runs on the same machine (Blender closed, fresh server).
+evidence). A **cold run** means a fresh ComfyUI server with empty history and
+models loaded from disk; a **hot rerun** is the immediate identical prompt served
+from ComfyUI's output cache. The optimized combo is AO 512/32, texture 2K,
+Remesh 512, and DecimateMesh 350K faces. Cold full runs used the same machine
+with Blender closed.
 Battle rows above ran on ComfyUI 3dd559d8 + torch 2.12; rows below on
 b0b74356 + torch 2.14 — cross-table deltas mix env change with dtype effects.
 Vertex counts are scale context, not a quality metric.
@@ -173,7 +182,8 @@ isolated) — so the two are not directly comparable. Visual verdict (this test
 case): the NVFP4 output had the simplest overall appearance and the least
 clear textures, with some details difficult to interpret; the handle also
 differed. This describes one generated result, not a general NVFP4 property
-— outputs may depend on seed and generation factors.
+— outputs may depend on seed and generation factors, and all generated models
+require some refinement.
 
 ## Reproduction
 
@@ -278,7 +288,7 @@ independently proposed in [PR #16828](https://github.com/Comfy-Org/ComfyUI/pull/
 | ComfyUI TRELLIS.2 runtime + workflow graph | Comfy-Org / community |
 | Calibrated int8 checkpoint | Comfy-Org (`trellis_2_int8_convrot`) |
 | Input test image | Shipped in `input/` (free to distribute, non-commercial — see `NOTICE.md`) |
-| Bug report draft | This study → reported as [Comfy-Org/ComfyUI#16827](https://github.com/Comfy-Org/ComfyUI/issues/16827); fix proposed in [PR #16828](https://github.com/Comfy-Org/ComfyUI/pull/16828) by another contributor (open, awaiting maintainer review as of 2026-10-11) |
+| Bug report draft | This study → reported in [Comfy-Org/ComfyUI#16827](https://github.com/Comfy-Org/ComfyUI/issues/16827); a fix was proposed by another contributor in [PR #16828](https://github.com/Comfy-Org/ComfyUI/pull/16828), which remains open and awaits human review as of 2026-10-18 |
 
 ## Repository layout
 
@@ -331,11 +341,12 @@ If something looks off, open an issue or PR.
 
 ## Next steps
 
-- The repository and upstream bug report are published.
+- The repository is published; the upstream bug is reported in issue [#16827](https://github.com/Comfy-Org/ComfyUI/issues/16827), which remains open and requires human review (as of 2026-10-18).
 - Performance study done (bottleneck map, AO/remesh wins, NVFP4 4-bit end-to-end).
 - SageAttention 2.2.0 tested: sampling ~35% faster (KSampler 23: 63 → 41 s,
   full int8 cold 371 → 332 s), geometry defect pattern unchanged
   (see `docs/perf-study.md`). torch.compile on the DiT not tried.
-- Open (future work): torch.compile experiment; KSampler-23 (63–83 s) remains
-  the largest single stage. Comparisons, measurements and the NVFP4 visual
-  verdict are published; torch.compile stays open.
+- Open (future work): a torch.compile experiment and further optimization of
+  KSampler-23, which remains the largest single stage (63–83 s). SageAttention
+  has already been tested; the open item is further KSampler-23 optimization.
+  Comparisons, measurements and the NVFP4 visual verdict are published.
